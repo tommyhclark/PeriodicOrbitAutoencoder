@@ -1,0 +1,15 @@
+train_data_path: data/processed/L2_Halo_Small_Small_5sqrt2em4_51pts_training.txt
+test_data_path: data/processed/L2_Halo_Small_Small_1em3_51pts_training.txt
+decoded_data_path: HaloFamilyMiniTest/decoded_L2_Halo_51pts_1em3.txt
+latent_data_path: HaloFamilyMiniTest/latent_L2_Halo_51pts_1em3.txt
+model_path: HaloFamilyMiniTest/halo_autoencoder_model.pth
+train_frac: 0.99
+random_seed: 31
+batch_size: 20
+learning_rate: 0.0001
+num_epochs: 1000
+device: mps
+lr_scheduler_step_size: 400
+lr_schedule_gamma: 0.1
+num_MS_points: 51
+lambda_T: 0.00653594771

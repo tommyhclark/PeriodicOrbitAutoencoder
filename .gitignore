@@ -1,0 +1,8 @@
+data/
+*.pth
+**/*.txt
+*.pptx
+**/*.jpg
+
+!READNE.txt
+!requirements.txt
