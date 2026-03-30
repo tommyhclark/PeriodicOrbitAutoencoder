@@ -2,8 +2,15 @@ train_data_path: data/processed/L2_Lyap_Small_Moon_1em3_51pts_training.txt
 test_data_path: data/processed/L2_Lyap_Small_Moon_sqrt2em3_51pts_training.txt
 decoded_data_path: L2Lyapunov/decoded_L2_Lyap_51pts_sqrt2em3.txt
 latent_data_path: L2Lyapunov/latent_L2_Lyap_51pts_sqrt2em3.txt
+latent_train_data_path: L2Lyapunov/latent_L2_Lyap_51pts_1em3.txt
+
+decoded_data_path_runs: L2Lyapunov/decoded_L2_Lyap_51pts_sqrt2em3_runs.txt
+
+decoded_data_fixed_latent_path: L2Lyapunov/decoded_L2_Lyap_51pts_fixed_latent.txt
+latent_data_fixed_latent: L2Lyapunov/latent_test_fixed_latent.txt
+
 model_path: L2Lyapunov/lyap_autoencoder_model.pth
-train_frac: 0.99
+train_frac: 0.95
 random_seed: 31
 batch_size: 20
 learning_rate: 0.0001

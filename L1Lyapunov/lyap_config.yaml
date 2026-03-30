@@ -1,12 +1,21 @@
 train_data_path: data/processed/L1_Lyap_Small_Big_1em3_51pts_training.txt
 test_data_path: data/processed/L1_Lyap_Small_Big_sqrt2em3_51pts_training.txt
+test_latent_path: data/processed/latent_test_data.txt
 decoded_data_path: L1Lyapunov/decoded_L1_Lyap_51pts_sqrt2em3.txt
 latent_data_path: L1Lyapunov/latent_L1_Lyap_51pts_sqrt2em3.txt
+latent_train_data_path: L1Lyapunov/latent_L1_Lyap_51pts_1em3.txt
+
+decoded_data_path_runs: L1Lyapunov/decoded_L1_Lyap_51pts_sqrt2em3_runs.txt
+
+decoded_data_fixed_latent_path: L1Lyapunov/decoded_L1_Lyap_51pts_fixed_latent.txt
+latent_data_fixed_latent: L1Lyapunov/latent_test_fixed_latent.txt
+
+
 model_path: L1Lyapunov/lyap_autoencoder_model.pth
 train_frac: 0.999
 random_seed: 41
 batch_size: 20
-learning_rate: 0.0001
+learning_rate: 0.0003
 num_epochs: 1000
 device: mps
 lr_scheduler_step_size: 400

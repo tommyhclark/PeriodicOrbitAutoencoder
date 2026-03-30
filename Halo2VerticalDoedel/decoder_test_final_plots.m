@@ -10,17 +10,20 @@ xShift = const.l2;
 l2 = const.l2;
 config = readyaml("Halo2VerticalDoedel/config.yaml");
 
-test_data = readmatrix(config.test_data_path);
-decoded_data = readmatrix(config.decoded_data_path);
-latent_data = readmatrix(config.latent_data_path);
+% test_data = readmatrix(config.test_data_path);
+% decoded_data = readmatrix(config.decoded_data_path);
+% latent_data = readmatrix(config.latent_data_path);
+
+decoded_data = readmatrix(config.decoded_data_fixed_latent_path);
+latent_data = readmatrix(config.latent_data_fixed_latent);
 
 N=51;
 Norb = size(decoded_data,2);
-test_periods = test_data(N*6+1,:);
+% test_periods = test_data(N*6+1,:);
 decoded_periods = decoded_data(N*6+1,:);
-test_states = reshape(test_data(1:N*6,:), 6, N, Norb);
-test_states = permute(test_states,[3 2 1]);
-test_states(:,:,1) = test_states(:,:,1) + xShift;
+% test_states = reshape(test_data(1:N*6,:), 6, N, Norb);
+% test_states = permute(test_states,[3 2 1]);
+% test_states(:,:,1) = test_states(:,:,1) + xShift;
 decoded_states = reshape(decoded_data(1:N*6,:), 6, N, Norb);
 decoded_states = permute(decoded_states,[3 2 1]);
 decoded_states(:,:,1) = decoded_states(:,:,1) + xShift;
@@ -59,7 +62,7 @@ parfor ii=1:length(decoded_states_corrected)
     [~,y1] = ode113(@(t,state) cr3bpStateOnly(state, mu), linspace(0,decoded_periods(ii),400), decoded_states_corrected(ii,1,1:6), options);
     decoded_states_integrated(ii,:,1:6) = y1;
 end
-
+%%
 % Compute Jacobi constant deviations, Apolune Z, etc.
 maxcdev = NaN(Norb,1);
 zapolune = NaN(Norb,1);
@@ -879,4 +882,224 @@ grid(ax9, 'on');
 cs = zeros(size(test_states,1));
 for ii = 1:size(test_states,1)
     cs(ii) = mean(jacobiConstant(squeeze(test_states(ii,:,1:6)),mu));
+end
+
+%% Plot 1 - Show Decoded Family - Aligned 4-on-2 Layout
+
+
+
+
+
+
+clc
+z_apolune = decoded_states(:,1,1)-(1-mu);
+
+fig = figure('Color','w','Units','pixels');
+tileWidth = 300;
+tileHeight = tileWidth;
+fig.Position(3:4) = [3*tileWidth, 2*tileHeight]; 
+
+my_cmap = turbo(256);
+x_ref = linspace(min(latent_data), max(latent_data), 256);
+all_orbit_colors = interp1(x_ref, my_cmap, latent_data);
+
+% Create 2x8 grid for perfect vertical alignment
+t = tiledlayout(2, 8, 'Padding', 'compact', 'TileSpacing', 'loose');
+
+% Pre-calculate Moon sphere data once
+moon_radius = const.moon_R;
+[Xm,Ym,Zm] = sphere(50);
+Xm = moon_radius*Xm + (1-mu);
+Ym = moon_radius*Ym;
+Zm = moon_radius*Zm;
+
+
+
+% =========================================================================
+% TOP ROW: 3 Views (Spatial) - Spanning 2 columns each
+% =========================================================================
+
+% --- View 1: 3D Side View (XZ plane, Y from back) ---
+ax1 = nexttile(1, [1 2]); 
+hold(ax1,'on');
+for ii = 1:100:Norb
+    states_out = squeeze(decoded_states(ii,:,:));
+    states = squeeze(decoded_states_integrated(ii,:,:));
+    orbitColor = all_orbit_colors(ii,:);
+    scatter3(ax1, states_out(:,1), states_out(:,2), states_out(:,3), ...
+             20, orbitColor, 'filled');
+    plot3(ax1, [states(:,1);states(1,1)], ...
+               [states(:,2);states(1,2)], ...
+               [states(:,3);states(1,3)], ...
+               'Color',orbitColor,'LineWidth',1e-10);
+end
+scatter3(ax1, l2, 0, 0, 'red', 'filled', 'diamond', 'DisplayName', 'L_2');
+moon_radius = const.moon_R;
+[Xm,Ym,Zm] = sphere(50);
+Xm = moon_radius*Xm + (1-mu); Ym = moon_radius*Ym; Zm = moon_radius*Zm;
+surf(ax1, Xm, Ym, Zm, 'FaceColor', 'k', 'EdgeColor', 'none', 'DisplayName', 'Moon');
+
+xlabel(ax1,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax1,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax1,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax1, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+axis(ax1,'equal'); xlim(ax1,[0.8 1.4]); ylim(ax1,[-0.3 0.3]); zlim(ax1,[-0.3 0.3]);
+view(ax1, [90 0]); daspect(ax1,[1 1 1]);
+
+% --- Copy to View 2: XY Plane (Top View) ---
+ax2 = nexttile(3, [1 2]);
+allKids = get(ax1,'Children');
+copyobj(allKids, ax2);
+view(ax2, [0 0]);
+xlabel(ax2,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax2,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax2,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax2, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+axis(ax2,'equal'); xlim(ax2,[0.8 1.4]); ylim(ax2,[-0.3 0.3]); zlim(ax2,[-0.3 0.3]);
+daspect(ax2,[1 1 1]);
+
+% --- Copy to View 3: XZ Plane (Side View from +Y) ---
+ax3 = nexttile(5, [1 2]);
+copyobj(allKids, ax3);
+view(ax3, [0 90]);
+xlabel(ax3,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax3,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax3,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax3, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+axis(ax3,'equal'); xlim(ax3, xlim(ax1)); ylim(ax3, ylim(ax1)); zlim(ax3, zlim(ax1));
+daspect(ax3,[1 1 1]);
+
+% --- Copy to View 4: XZ Plane (Side View from +Y) ---
+ax3 = nexttile(7, [1 2]);
+copyobj(allKids, ax3);
+view(ax3, [0 90]);
+xlabel(ax3,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax3,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax3,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax3, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+axis(ax3,'equal'); xlim(ax3, xlim(ax1)); ylim(ax3, ylim(ax1)); zlim(ax3, zlim(ax1));
+daspect(ax3,[1 1 1]);
+
+% =========================================================================
+% BOTTOM ROW: 2 Latent Plots - Spanning 3 columns each
+% =========================================================================
+
+% --- Latent vs Period ---
+ax4 = nexttile(9, [1 4]); % Starts at 7, spans 3
+scatter(ax4, latent_data, decoded_periods, 20, all_orbit_colors, 'filled');
+xlabel(ax4,'Latent Variable','FontSize',30,'Interpreter','latex');
+ylabel(ax4,'Orbit Period','FontSize',30,'Interpreter','latex');
+set(ax4, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+box(ax4, 'on'); grid(ax4, 'on');
+
+% --- Latent vs Jacobi Constant ---
+ax5 = nexttile(13, [1 4]); % Starts at 10, spans 3
+scatter(ax5, latent_data, jacobiConstant(decoded_states(:,1,1:6),mu), 20, all_orbit_colors, 'filled');
+xlabel(ax5,'Latent Variable','FontSize',30,'Interpreter','latex');
+ylabel(ax5,'Jacobi Constant','FontSize',30,'Interpreter','latex');
+set(ax5, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+box(ax5, 'on'); grid(ax5, 'on');
+%%
+
+%% Refactored Plotting Script
+clc;
+
+vert_indices = 5150:25:6000;
+axial_indices = 4350:50:5125;
+lyap_indices = 3000:100:4350;
+halo_indices = 1:100:3000;
+indices = {vert_indices,axial_indices,lyap_indices,halo_indices};
+
+
+
+% --- Configuration ---
+tileWidth = 300;
+fig = figure('Color','w','Units','pixels');
+fig.Position(3:4) = [8*tileWidth, 6*tileWidth]; % Adjusted ratio
+
+% Pre-calculate colors and geometry
+my_cmap = turbo(256);
+all_orbit_colors = interp1(linspace(min(latent_data), max(latent_data), 256), my_cmap, latent_data);
+[Xm, Ym, Zm] = sphere(50);
+Xm = (const.moon_R * Xm) + (1-mu);
+Ym = const.moon_R * Ym;
+Zm = const.moon_R * Zm;
+
+t = tiledlayout(2, 8, 'Padding', 'compact', 'TileSpacing', 'loose');
+
+% =========================================================================
+% TOP ROW: SPATIAL VIEWS (Tiles 1, 3, 5, 7)
+% =========================================================================
+views = {[90 0],[270 0],[90 90],[340, 0]}; % Az, El for each tile
+lims = cell(4,1); % Create a 4x1 cell array
+lims{1} = {[0.8 1.4], [-0.3 0.3], [-0.3 0.3]};
+lims{2} = {[0.8 1.4], [-0.3 0.3], [-0.3 0.3]};
+lims{3} = {[0.8 1.4], [-0.3 0.3], [-0.3 0.3]};
+lims{4} = {[0.95 1.2], [-0.15 0.15], [-0.18 0.22]};
+
+spatial_axes = [];
+
+for i = 1:4
+    ax = nexttile((i-1)*2 + 1, [1 2]);
+    hold(ax, 'on');
+
+
+    % Plot all orbits in grey
+    for ii = 1:50:Norb
+        states = squeeze(decoded_states_integrated(ii,:,:));
+        plot3(ax, [states(:,1);states(1,1)], [states(:,2);states(1,2)], [states(:,3);states(1,3)], ...
+              'Color',[0 0 0 0.05],'LineWidth',1e-10);
+        pts = squeeze(decoded_states(ii,:,:));
+        scatter3(ax, pts(:,1), pts(:,2), pts(:,3), 3, "k", 'filled','MarkerFaceAlpha',0.1,'MarkerEdgeAlpha',0.1);
+    end
+    
+    for ii = indices{i}
+        orbitColor = all_orbit_colors(ii,:);
+        states = squeeze(decoded_states_integrated(ii,:,:));
+        plot3(ax, [states(:,1);states(1,1)], [states(:,2);states(1,2)], [states(:,3);states(1,3)], ...
+              'Color', orbitColor, 'LineWidth', 0.5);
+        
+        % Scatter points
+        pts = squeeze(decoded_states(ii,:,:));
+        scatter3(ax, pts(:,1), pts(:,2), pts(:,3), 20, orbitColor, 'filled');
+    end
+
+    % Add Moon and L2
+    surf(ax, Xm, Ym, Zm, 'FaceColor', 'k', 'EdgeColor', 'none');
+    scatter3(ax, l2, 0, 0, 'r', 'filled', 'diamond');
+    
+    % Standardize Axis Look
+    view(ax, views{i});
+    format_spatial_axis(ax, lims{i});
+    spatial_axes(end+1) = ax; % Store reference
+end
+
+% =========================================================================
+% BOTTOM ROW: LATENT PLOTS (Tiles 9 and 13)
+% =========================================================================
+% Plot 1: Period
+ax_p = nexttile(9, [1 4]);
+render_latent_scatter(ax_p, latent_data, decoded_periods, all_orbit_colors, 'Orbit Period');
+
+% Plot 2: Jacobi Constant
+ax_j = nexttile(13, [1 4]);
+jc = jacobiConstant(decoded_states(:,1,1:6), mu);
+render_latent_scatter(ax_j, latent_data, jc, all_orbit_colors, 'Jacobi Constant');
+%%
+% --- Helper Functions (Local) ---
+function format_spatial_axis(ax, lims)
+    xlabel(ax, 'X [LU]', 'Interpreter', 'latex');
+    ylabel(ax, 'Y [LU]', 'Interpreter', 'latex');
+    zlabel(ax, 'Z [LU]', 'Interpreter', 'latex');
+    set(ax, 'LineWidth', 1.5, 'FontSize', 30, 'TickLabelInterpreter', 'latex');
+    axis(ax, 'equal'); 
+    xlim(ax, lims{1}); ylim(ax, lims{2}); zlim(ax, lims{3});
+end
+
+function render_latent_scatter(ax, x, y, colors, y_lab)
+    scatter(ax, x, y, 20, colors, 'filled');
+    xlabel(ax, 'Latent Variable', 'Interpreter', 'latex');
+    ylabel(ax, y_lab, 'Interpreter', 'latex');
+    set(ax, 'LineWidth', 1.5, 'FontSize', 30, 'TickLabelInterpreter', 'latex');
+    grid(ax, 'on');
 end

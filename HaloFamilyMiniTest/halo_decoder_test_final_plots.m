@@ -56,7 +56,7 @@ parfor ii=1:length(decoded_states)
     decoded_period_corrected(ii) = corrected_period;
 end
 not_corrected_idxs = find(~isnan(decoded_states_notcorrected(:,1,1)));
-
+%%
 % Integrate Decoded States
 clc
 decoded_states_integrated = NaN(size(decoded_states_corrected,1),400,6);

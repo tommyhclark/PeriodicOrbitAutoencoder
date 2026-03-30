@@ -58,6 +58,7 @@ def main(config_path):
     # Initialize model and training components
     model = Autoencoder()
     optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])
+    # optimizer = optim.AdamW(model.parameters(), lr=config["learning_rate"], weight_decay = 1e-3)
     device = config["device"]
     model = model.to(device)
     

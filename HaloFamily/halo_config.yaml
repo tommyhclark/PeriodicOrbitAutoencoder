@@ -2,8 +2,16 @@ train_data_path: data/processed/L2_Halo_Small_Small_5sqrt2em4_51pts_training.txt
 test_data_path: data/processed/L2_Halo_Small_Small_1em3_51pts_training.txt
 decoded_data_path: HaloFamily/decoded_L2_Halo_51pts_1em3.txt
 latent_data_path: HaloFamily/latent_L2_Halo_51pts_1em3.txt
+latent_train_data_path: HaloFamily/latent_L2_Halo_51pts_5sqrt2em4.txt
 model_path: HaloFamily/halo_autoencoder_model.pth
-train_frac: 0.99
+
+decoded_data_path_runs: HaloFamily/decoded_L2_Halo_51pts_1em3_runs.txt
+
+decoded_data_fixed_latent_path: HaloFamily/decoded_L2_Halo_51pts_fixed_latent.txt
+latent_data_fixed_latent: HaloFamily/latent_test_fixed_latent.txt
+
+
+train_frac: 0.95
 random_seed: 31
 batch_size: 20
 learning_rate: 0.0001

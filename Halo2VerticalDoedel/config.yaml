@@ -2,6 +2,13 @@ train_data_path: data/processed/L2_Halo2Vertical_5sqrt2em4_51pts_training.txt
 test_data_path: data/processed/L2_Halo2Vertical_1em3_51pts_training.txt
 decoded_data_path: Halo2VerticalDoedel/decoded_51pts_1em3.txt
 latent_data_path: Halo2VerticalDoedel/latent_51pts_1em3.txt
+latent_train_data_path: Halo2VerticalDoedel/latent_51pts_5sqrt2em4.txt
+
+decoded_data_path_runs: Halo2VerticalDoedel/decoded_51pts_1em3_runs.txt
+
+decoded_data_fixed_latent_path: Halo2VerticalDoedel/decoded_51pts_fixed_latent.txt
+latent_data_fixed_latent: Halo2VerticalDoedel/latent_test_fixed_latent.txt
+
 model_path: Halo2VerticalDoedel/autoencoder_model.pth
 train_frac: 0.98
 random_seed: 36

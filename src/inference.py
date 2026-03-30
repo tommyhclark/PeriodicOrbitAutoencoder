@@ -14,8 +14,11 @@ def main(config_path):
 
     device = config["device"]
 
-    test_data = np.loadtxt(config["test_data_path"],delimiter=",")
-    test_data = test_data.T
+    # test_data = np.loadtxt(config["train_data_path"],delimiter=",")
+    # test_data = test_data.T
+    test_data = np.loadtxt(config["latent_data_fixed_latent"],delimiter=",")
+    test_data = test_data.reshape(-1,1)
+
     test_tensor = torch.tensor(test_data, dtype=torch.float32)
     
     model = Autoencoder()
@@ -27,14 +30,15 @@ def main(config_path):
     model.eval()
     with torch.no_grad():
         test_tensor = test_tensor.to(device)
-        decoded_test = model(test_tensor)  # Shape: (test_size, 307)
-        latent_test = model.encode(test_tensor)
+        decoded_test = model.decode(test_tensor)  
+        # decoded_test = model(test_tensor) # Shape: (test_size, 307)
+        # latent_test = model.encode(test_tensor)
     decoded_test_np = decoded_test.cpu().numpy().T  # Shape: (307, test_size)
-    latent_test_np = latent_test.cpu().numpy()
+    # latent_test_np = latent_test.cpu().numpy()
 
-    np.savetxt(config["decoded_data_path"], decoded_test_np, delimiter=",")
-    np.savetxt(config["latent_data_path"],latent_test_np, delimiter=",")
-    torch.save(model.state_dict(), config["model_path"])
+    np.savetxt(config["decoded_data_fixed_latent_path"], decoded_test_np, delimiter=",")
+    # np.savetxt(config["latent_train_data_path"],latent_test_np, delimiter=",")
+    # torch.save(model.state_dict(), config["model_path"])
 
 
 if __name__ == "__main__":

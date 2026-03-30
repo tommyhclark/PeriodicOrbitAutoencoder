@@ -10,21 +10,25 @@ xShift = const.l2;
 l2 = const.l2;
 config = readyaml("HaloFamily/halo_config.yaml");
 
-test_data = readmatrix(config.test_data_path);
-decoded_data = readmatrix(config.decoded_data_path);
-latent_data = readmatrix(config.latent_data_path);
+
+decoded_data = readmatrix(config.decoded_data_fixed_latent_path);
+latent_data = readmatrix(config.latent_data_fixed_latent);
 
 N=51;
 Norb = size(decoded_data,2);
-test_periods = test_data(N*6+1,:);
+
+% test_data = readmatrix(config.test_data_path);
+% test_states = reshape(test_data(1:N*6,:), 6, N, Norb);
+% test_states = permute(test_states,[3 2 1]);
+% test_states(:,:,1) = test_states(:,:,1) + xShift;
+% test_periods = test_data(N*6+1,:);
+
+
 decoded_periods = decoded_data(N*6+1,:);
-test_states = reshape(test_data(1:N*6,:), 6, N, Norb);
-test_states = permute(test_states,[3 2 1]);
-test_states(:,:,1) = test_states(:,:,1) + xShift;
 decoded_states = reshape(decoded_data(1:N*6,:), 6, N, Norb);
 decoded_states = permute(decoded_states,[3 2 1]);
 decoded_states(:,:,1) = decoded_states(:,:,1) + xShift;
-
+%%
 % Correct Decoded States 
 
 mu = const.mu;
@@ -55,12 +59,12 @@ clc
 decoded_states_integrated = NaN(size(decoded_states_corrected,1),400,6);
 options = odeset('RelTol', 3e-14, 'AbsTol',1e-16);
 parfor ii=1:length(decoded_states_corrected)
-    % disp(ii)
+    disp(ii)
     [~,y1] = ode113(@(t,state) cr3bpStateOnly(state, mu), linspace(0,decoded_periods(ii),400), decoded_states_corrected(ii,1,1:6), options);
     decoded_states_integrated(ii,:,1:6) = y1;
 end
 
-% Compute Jacobi constant deviations, Apolune Z, etc.
+%% Compute Jacobi constant deviations, Apolune Z, etc.
 maxcdev = NaN(Norb,1);
 zapolune = NaN(Norb,1);
 cdiff = NaN(Norb,N);
@@ -84,10 +88,10 @@ for jj = 1:Norb
         maxcdev(jj) = min1;
     end
     torb(jj,:) = 1:N;
-    orbT(jj,:) = test_periods(jj)*sign(zapolune(jj));
+    % orbT(jj,:) = test_periods(jj)*sign(zapolune(jj));
 end
 
-[~,sortidx] = sort(sign(zapolune).*test_periods);
+[~,sortidx] = sort(sign(zapolune).*decoded_periods_corrected);
 orbz_resorted = orbz(sortidx,:);
 torb_resorted = torb(sortidx,:);
 cdiff_resorted = cdiff(sortidx,:);
@@ -95,64 +99,60 @@ orbT_resorted = orbT(sortidx,:);
 
 corrected_idxs = find(~ismember(1:Norb,not_corrected_idxs));
 
-
 %% Plot 1 - Show Decoded Family - multiple views, northern and southern, latent
-% clc
+clc
+
+northern_idxs = [1:50:2000, 2000:50:2500, 2500:50:3000];
+southern_idxs = [5000:50:Norb, 4000:100:5000, 3050:100:4000];
+
+% 
 z_apolune = decoded_states(:,1,3);
-cmap = jet(Norb);
 fig = figure('Color','w','Units','pixels');
 tileWidth = 300;
 tileHeight = tileWidth;
 fig.Position(3:4) = [3*tileWidth, 3*tileHeight];  % 3x3 grid
 
+
+my_cmap = turbo(256);
+x_ref = linspace(min(latent_data), max(latent_data), 256);
+all_orbit_colors = interp1(x_ref, my_cmap, latent_data);
+
 % Top Row: Northern Family - 3 Views
 % --- View 1: 3D Side View (XZ plane, Y from back) ---
 ax1 = subplot(3,3,1);
 hold(ax1,'on');
-for ii = 1:100:Norb/2-600
+
+
+
+for ii = northern_idxs
     states_out = squeeze(decoded_states(ii,:,:));
     states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
-    scatter3(ax1, states_out(:,1), states_out(:,2), states_out(:,3), ...
+    
+    orbitColor = all_orbit_colors(ii, :);
+
+    
+    horb1 = scatter3(ax1, states_out(:,1), states_out(:,2), states_out(:,3), ...
              20, orbitColor, 'filled');
-    plot3(ax1, [states(:,1);states(1,1)], ...
+    horb2 = plot3(ax1, [states(:,1);states(1,1)], ...
                [states(:,2);states(1,2)], ...
                [states(:,3);states(1,3)], ...
                'Color',orbitColor,'LineWidth',1e-10);
+
+    h_orb1.Annotation.LegendInformation.IconDisplayStyle = 'off';
+    h_orb2.Annotation.LegendInformation.IconDisplayStyle = 'off';
 end
-for ii = Norb/2-599:40:Norb/2-100
-    states_out = squeeze(decoded_states(ii,:,:));
-    states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
-    scatter3(ax1, states_out(:,1), states_out(:,2), states_out(:,3), ...
-             20, orbitColor, 'filled');
-    plot3(ax1, [states(:,1);states(1,1)], ...
-               [states(:,2);states(1,2)], ...
-               [states(:,3);states(1,3)], ...
-               'Color',orbitColor,'LineWidth',1e-10);
-end
-for ii = Norb/2-99:10:Norb/2
-    states_out = squeeze(decoded_states(ii,:,:));
-    states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
-    scatter3(ax1, states_out(:,1), states_out(:,2), states_out(:,3), ...
-             20, orbitColor, 'filled');
-    plot3(ax1, [states(:,1);states(1,1)], ...
-               [states(:,2);states(1,2)], ...
-               [states(:,3);states(1,3)], ...
-               'Color',orbitColor,'LineWidth',1e-10);
-end
-scatter3(ax1, l2,0,0,'red','filled','diamond','DisplayName','L_2');
+
+hl2 = scatter3(ax1, l2,0,0,'red','filled','diamond','DisplayName','$L_2$');
 moon_radius = const.moon_R;
 [Xm,Ym,Zm] = sphere(50);
 Xm = moon_radius*Xm + (1-mu);
 Ym = moon_radius*Ym;
 Zm = moon_radius*Zm;
-surf(ax1, Xm,Ym,Zm, 'FaceColor','k','EdgeColor','none','DisplayName','Moon');
-xlabel(ax1,'X','Interpreter','latex','FontSize',20);
-ylabel(ax1,'Y','Interpreter','latex','FontSize',20);
-zlabel(ax1,'Z','Interpreter','latex','FontSize',20);
-set(ax1, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+h_moon = surf(ax1, Xm,Ym,Zm, 'FaceColor','k','EdgeColor','none','DisplayName','Moon');
+xlabel(ax1,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax1,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax1,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax1, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 axis(ax1,'equal');
 xlim(ax1,[0.95 1.25]); ylim(ax1,[-0.15 0.15]); zlim(ax1,[-0.08 0.23]);
 view(ax1, [270 0]);
@@ -163,10 +163,10 @@ ax2 = subplot(3,3,2);
 allKids = get(ax1,'Children');
 copyobj(allKids, ax2);
 view(ax2, [0 0]);
-xlabel(ax2,'X','Interpreter','latex','FontSize',20);
-ylabel(ax2,'Y','Interpreter','latex','FontSize',20);
-zlabel(ax2,'Z','Interpreter','latex','FontSize',20);
-set(ax2, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+xlabel(ax2,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax2,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax2,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax2, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 axis(ax2,'equal');
 xlim(ax2, xlim(ax1)); ylim(ax2, ylim(ax1)); zlim(ax2, zlim(ax1));
 daspect(ax2,[1 1 1]);
@@ -175,22 +175,25 @@ daspect(ax2,[1 1 1]);
 ax3 = subplot(3,3,3);
 copyobj(allKids, ax3);
 view(ax3, [0 90]);
-xlabel(ax3,'X','Interpreter','latex','FontSize',20);
-ylabel(ax3,'Y','Interpreter','latex','FontSize',20);
-zlabel(ax3,'Z','Interpreter','latex','FontSize',20);
-set(ax3, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+xlabel(ax3,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax3,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax3,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax3, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 axis(ax3,'equal');
 xlim(ax3, xlim(ax1)); ylim(ax3, ylim(ax1)); zlim(ax3, zlim(ax1));
 daspect(ax3,[1 1 1]);
+
+% leg = legend(ax1, [hl2, h_moon], 'Interpreter', 'latex', 'FontSize', 14);
+% leg.Location = 'northeast';
 
 % Middle Row: Southern Family - 3 Views
 % --- View 4: 3D Side View ---
 ax4 = subplot(3,3,4);
 hold(ax4,'on');
-for ii = Norb-599:100:Norb
+for ii = southern_idxs
     states_out = squeeze(decoded_states(ii,:,:));
     states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
+    orbitColor = all_orbit_colors(ii, :);
     scatter3(ax4, states_out(:,1), states_out(:,2), states_out(:,3), ...
              20, orbitColor, 'filled');
     plot3(ax4, [states(:,1);states(1,1)], ...
@@ -198,34 +201,13 @@ for ii = Norb-599:100:Norb
                [states(:,3);states(1,3)], ...
                'Color',orbitColor,'LineWidth',1e-10);
 end
-for ii = Norb/2+100:40:Norb-600
-    states_out = squeeze(decoded_states(ii,:,:));
-    states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
-    scatter3(ax4, states_out(:,1), states_out(:,2), states_out(:,3), ...
-             20, orbitColor, 'filled');
-    plot3(ax4, [states(:,1);states(1,1)], ...
-               [states(:,2);states(1,2)], ...
-               [states(:,3);states(1,3)], ...
-               'Color',orbitColor,'LineWidth',1e-10);
-end
-for ii = Norb/2:10:Norb/2+99
-    states_out = squeeze(decoded_states(ii,:,:));
-    states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
-    scatter3(ax4, states_out(:,1), states_out(:,2), states_out(:,3), ...
-             20, orbitColor, 'filled');
-    plot3(ax4, [states(:,1);states(1,1)], ...
-               [states(:,2);states(1,2)], ...
-               [states(:,3);states(1,3)], ...
-               'Color',orbitColor,'LineWidth',1e-10);
-end
+
 scatter3(ax4, l2,0,0,'red','filled','diamond','DisplayName','L_2');
 surf(ax4, Xm,Ym,Zm, 'FaceColor','k','EdgeColor','none','DisplayName','Moon');
-xlabel(ax4,'X','Interpreter','latex','FontSize',20);
-ylabel(ax4,'Y','Interpreter','latex','FontSize',20);
-zlabel(ax4,'Z','Interpreter','latex','FontSize',20);
-set(ax4, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+xlabel(ax4,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax4,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax4,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax4, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 axis(ax4,'equal');
 xlim(ax4,[0.95 1.25]); ylim(ax4,[-0.15 0.15]); zlim(ax4,[-0.23 0.08]);
 view(ax4, [270 0]);
@@ -236,10 +218,10 @@ ax5 = subplot(3,3,5);
 allKids_south = get(ax4,'Children');
 copyobj(allKids_south, ax5);
 view(ax5, [0 0]);
-xlabel(ax5,'X','Interpreter','latex','FontSize',20);
-ylabel(ax5,'Y','Interpreter','latex','FontSize',20);
-zlabel(ax5,'Z','Interpreter','latex','FontSize',20);
-set(ax5, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+xlabel(ax5,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax5,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax5,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax5, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 axis(ax5,'equal');
 xlim(ax5, xlim(ax4)); ylim(ax5, ylim(ax4)); zlim(ax5, zlim(ax4));
 daspect(ax5,[1 1 1]);
@@ -248,10 +230,10 @@ daspect(ax5,[1 1 1]);
 ax6 = subplot(3,3,6);
 copyobj(allKids_south, ax6);
 view(ax6, [0 90]);
-xlabel(ax6,'X','Interpreter','latex','FontSize',20);
-ylabel(ax6,'Y','Interpreter','latex','FontSize',20);
-zlabel(ax6,'Z','Interpreter','latex','FontSize',20);
-set(ax6, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+xlabel(ax6,'X [LU]','Interpreter','latex','FontSize',30);
+ylabel(ax6,'Y [LU]','Interpreter','latex','FontSize',30);
+zlabel(ax6,'Z [LU]','Interpreter','latex','FontSize',30);
+set(ax6, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 axis(ax6,'equal');
 xlim(ax6, xlim(ax4)); ylim(ax6, ylim(ax4)); zlim(ax6, zlim(ax4));
 daspect(ax6,[1 1 1]);
@@ -259,30 +241,32 @@ daspect(ax6,[1 1 1]);
 % Bottom Row: 2D Latent Variable Plots
 % --- Latent vs Period ---
 ax7 = subplot(3,3,7);
-scatter(ax7, latent_data, decoded_periods, 20, cmap(1:length(latent_data),:), 'filled');
-xlabel(ax7,'Latent Variable','FontSize',20,'Interpreter','latex');
-ylabel(ax7,'Orbit Period','FontSize',20,'Interpreter','latex');
-set(ax7, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+scatter(ax7, latent_data, decoded_periods, 20, all_orbit_colors, 'filled');
+xlabel(ax7,'Latent Variable','FontSize',30,'Interpreter','latex');
+ylabel(ax7,'Orbit Period','FontSize',30,'Interpreter','latex');
+set(ax7, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 box(ax7, 'on');
 grid(ax7, 'on');
 
 % --- Latent vs Apolune Z ---
 ax8 = subplot(3,3,8);
-scatter(ax8, latent_data, z_apolune, 20, cmap(1:length(latent_data),:), 'filled');
-xlabel(ax8,'Latent Variable','FontSize',20,'Interpreter','latex');
-ylabel(ax8,'Apolune Z Value','FontSize',20,'Interpreter','latex');
-set(ax8, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+scatter(ax8, latent_data, z_apolune, 20, all_orbit_colors, 'filled');
+xlabel(ax8,'Latent Variable','FontSize',30,'Interpreter','latex');
+ylabel(ax8,'Out-of-Plane Amplitude','FontSize',30,'Interpreter','latex');
+set(ax8, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 box(ax8, 'on');
 grid(ax8, 'on');
 
 % --- Latent vs Jacobi Constant ---
 ax9 = subplot(3,3,9);
-scatter(ax9, latent_data, jacobiConstant(decoded_states(:,1,1:6),mu), 20, cmap(1:length(latent_data),:), 'filled');
-xlabel(ax9,'Latent Variable','FontSize',20,'Interpreter','latex');
-ylabel(ax9,'Jacobi Constant','FontSize',20,'Interpreter','latex');
-set(ax9, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+scatter(ax9, latent_data, jacobiConstant(decoded_states(:,1,1:6),mu), 20, all_orbit_colors, 'filled');
+xlabel(ax9,'Latent Variable','FontSize',30,'Interpreter','latex');
+ylabel(ax9,'Jacobi Constant','FontSize',30,'Interpreter','latex');
+set(ax9, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 box(ax9, 'on');
 grid(ax9, 'on');
+
+
 
 
 %% Plot 2 - Jacobi Difference histogram with point coloring
@@ -303,10 +287,10 @@ for i = 1:numel(bin_centers)
           'YData', [0 0 Nhist(i) Nhist(i)], ...
           'FaceColor', cmap(i,:), 'EdgeColor', 'none');
 end
-set(gca, 'XScale', 'log', 'LineWidth', 2, 'FontSize', 20, ...
+set(gca, 'XScale', 'log', 'LineWidth', 2, 'FontSize', 30, ...
          'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-xlabel('Jacobi Constant Variation','FontSize',26,'Interpreter','latex')
-ylabel('Fraction of Test Set','FontSize',26,'Interpreter','latex')
+xlabel('Jacobi Constant Variation','FontSize',30,'Interpreter','latex')
+ylabel('Fraction of Test Set','FontSize',30,'Interpreter','latex')
 ylim([0 0.15])
 xlim([1e-6 1e-2])
 clim([min_val max_val])
@@ -334,12 +318,12 @@ Xm = moon_radius*Xm + (1-mu);
 Ym = moon_radius*Ym;
 Zm = moon_radius*Zm;
 surf(Xm,Ym,Zm, 'FaceColor','k','EdgeColor','none','DisplayName','Moon');
-xlabel('X','FontSize',26,'Interpreter','latex')
-ylabel('Y','FontSize',26,'Interpreter','latex')
-zlabel('Z','FontSize',26,'Interpreter','latex')
+xlabel('X [LU]','FontSize',26,'Interpreter','latex')
+ylabel('Y [LU]','FontSize',26,'Interpreter','latex')
+zlabel('Z [LU]','FontSize',26,'Interpreter','latex')
 axis equal
 view([0 0])
-set(gca, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex','ColorScale','log');
+set(gca, 'LineWidth', 2, 'FontSize', 30, 'TickLabelInterpreter', 'latex','ColorScale','log');
 xlim([0.95 1.25]); ylim([-0.15 0.15]); zlim([-0.08 0.23]);
 colormap(parula)
 % colorbar
@@ -368,22 +352,23 @@ Xm = moon_radius*Xm + (1-mu);
 Ym = moon_radius*Ym;
 Zm = moon_radius*Zm;
 surf(Xm,Ym,Zm, 'FaceColor','k','EdgeColor','none','DisplayName','Moon');
-xlabel('X','FontSize',26,'Interpreter','latex')
-ylabel('Y','FontSize',26,'Interpreter','latex')
-zlabel('Z','FontSize',26,'Interpreter','latex')
+xlabel('X [LU]','FontSize',26,'Interpreter','latex')
+ylabel('Y [LU]','FontSize',26,'Interpreter','latex')
+zlabel('Z [LU]','FontSize',26,'Interpreter','latex')
 axis equal
 view([-90 0])
-set(gca, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex','ColorScale','log');
+set(gca, 'LineWidth', 2, 'FontSize', 30, 'TickLabelInterpreter', 'latex','ColorScale','log');
 xlim([0.95 1.25]); ylim([-0.15 0.15]); zlim([-0.08 0.23]);
 colormap(parula)
-colorbar
+cb = colorbar;
+set(cb, 'TickLabelInterpreter', 'latex');
 clim([min_val max_val])
 
 fprintf("Median Jacobi Constant Difference %.4e \n",median(abscdiff,'all'))
 
 %% Plot 3 - Initial constraint violations histogram with orbit coloring
 fig = figure;
-set(fig,"Position",[584   520   745   395]);
+set(fig,"Position",[584   520   1200   500]);
 tiledlayout(1,2);
 nexttile;
 min_val = min(initial_constraint_violations(initial_constraint_violations > 0));
@@ -398,31 +383,33 @@ for i = 1:numel(bin_centers)
           'YData', [0 0 Nhist(i) Nhist(i)], ...
           'FaceColor', cmap(i,:), 'EdgeColor', 'none');
 end
-set(gca, 'XScale', 'log', 'LineWidth', 2, 'FontSize', 20, ...
+set(gca, 'XScale', 'log', 'LineWidth', 2, 'FontSize', 30, ...
          'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-xlabel('Initial Constraint Violation','FontSize',20,'Interpreter','latex')
-ylabel('Fraction of Test Set','FontSize',20,'Interpreter','latex')
-ylim([0 0.17])
+xlabel('Initial Constraint Violation','FontSize',30,'Interpreter','latex')
+ylabel('Fraction of Test Set','FontSize',30,'Interpreter','latex')
+ylim([0 0.12])
 clim([min_val max_val])
 
 nexttile;
 hold on
-for ii = 2:50:Norb
+for ii = 2:100:Norb
     states = squeeze(decoded_states_integrated(ii,:,:));
     val = initial_constraint_violations(ii);
     idx = discretize(val,bin_edges);
     plot3([states(:,1); states(1,1)], [states(:,2); states(1,2)], [states(:,3); states(1,3)], ...
-          'Color', cmap(idx,:), 'LineWidth', 0.5);
+          'Color', cmap(idx,:), 'LineWidth', 2);
 end
-xlabel('X','FontSize',20,'Interpreter','latex')
-ylabel('Y','FontSize',20,'Interpreter','latex')
-zlabel('Z','FontSize',20,'Interpreter','latex')
+xlabel('X [LU]','FontSize',30,'Interpreter','latex')
+ylabel('Y [LU]','FontSize',30,'Interpreter','latex')
+zlabel('Z [LU]','FontSize',30,'Interpreter','latex')
 axis equal
 view([0 0])
-set(gca, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex','ColorScale','log');
+set(gca, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex','ColorScale','log');
 colormap(parula)
-colorbar
+cb = colorbar;
+set(cb, 'TickLabelInterpreter', 'latex',"Fontsize",30);
 clim([min_val max_val])
+
 
 fprintf("Median Initial Constraint Violation %.4e \n",median(initial_constraint_violations))
 
@@ -445,29 +432,30 @@ for i = 1:numel(bin_centers)
           'YData', [0 0 Nhist(i) Nhist(i)], ...
           'FaceColor', cmap(i,:), 'EdgeColor', 'none');
 end
-set(gca, 'XScale', 'log', 'LineWidth', 2, 'FontSize', 20, ...
+set(gca, 'XScale', 'log', 'LineWidth', 2, 'FontSize', 30, ...
          'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-xlabel('Absolute Period Difference','FontSize',20,'Interpreter','latex')
-ylabel('Fraction of Test Set','FontSize',20,'Interpreter','latex')
+xlabel('Absolute Period Difference','FontSize',30,'Interpreter','latex')
+ylabel('Fraction of Test Set','FontSize',30,'Interpreter','latex')
 ylim([0 0.15])
 
 nexttile;
 hold on
-for ii = 1:50:Norb
+for ii = 1:100:Norb
     states = squeeze(decoded_states_integrated(ii,:,:));
     val = T_diff(ii);
     idx = discretize(val,bin_edges);
     plot3([states(:,1); states(1,1)], [states(:,2); states(1,2)], [states(:,3); states(1,3)], ...
-          'Color', cmap(idx,:), 'LineWidth', 0.5);
+          'Color', cmap(idx,:), 'LineWidth', 2);
 end
-xlabel('X','FontSize',20,'Interpreter','latex')
-ylabel('Y','FontSize',20,'Interpreter','latex')
-zlabel('Z','FontSize',20,'Interpreter','latex')
+xlabel('X [LU]','FontSize',30,'Interpreter','latex')
+ylabel('Y [LU]','FontSize',30,'Interpreter','latex')
+zlabel('Z [LU]','FontSize',30,'Interpreter','latex')
 axis equal
 view([0 0])
-set(gca, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex','ColorScale','log');
+set(gca, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex','ColorScale','log');
 colormap(parula)
 cb = colorbar;
+set(cb, 'TickLabelInterpreter', 'latex',"Fontsize",30);
 clim([min_val max_val])
 
 fprintf("Median Period Difference (Invertibility) %.4e \n",median(T_diff))
@@ -612,3 +600,5 @@ clim([min_val max_val])
 fprintf("Median State Correction %.4e \n",median(total_correction))
 fprintf("Median Steps Required %.2e \n",median(steps_required))
 fprintf("Median Period Correction %.4e \n",median(T_diff))
+
+%%

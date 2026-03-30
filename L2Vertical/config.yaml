@@ -2,8 +2,15 @@ train_data_path: data/processed/L2_Vertical_Small_B2_5sqrt2em4_51pts_training.tx
 test_data_path: data/processed/L2_Vertical_Small_B2_1em3_51pts_training.txt
 decoded_data_path: L2Vertical/decoded_L2_Vertical_51pts_1em3.txt
 latent_data_path: L2Vertical/latent_L2_Vertical_51pts_1em3.txt
+latent_train_data_path: L2Vertical/latent_L2_Vertical_51pts_5sqrt2em4.txt
+
+decoded_data_path_runs: L2Vertical/decoded_L2_Vertical_51pts_1em3_runs.txt
+
+decoded_data_fixed_latent_path: L2Vertical/decoded_L2_Vertical_51pts_fixed_latent.txt
+latent_data_fixed_latent: L2Vertical/latent_test_fixed_latent.txt
+
 model_path: L2Vertical/autoencoder_model.pth
-train_frac: 0.999
+train_frac: 0.95
 random_seed: 35
 batch_size: 20
 learning_rate: 0.0001

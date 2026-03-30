@@ -13,17 +13,21 @@ l1 = const.l1; % For Plotting
 config = readyaml("L1Lyapunov/lyap_config.yaml");
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-test_data = readmatrix(config.test_data_path);
-decoded_data = readmatrix(config.decoded_data_path);
-latent_data = readmatrix(config.latent_data_path);
+% test_data = readmatrix(config.test_data_path);
+% decoded_data = readmatrix(config.decoded_data_path);
+% latent_data = readmatrix(config.latent_data_path);
+
+decoded_data = readmatrix(config.decoded_data_fixed_latent_path);
+
+latent_data = readmatrix(config.latent_data_fixed_latent);
 
 N=51;
 Norb = size(decoded_data,2);
-test_periods = test_data(N*6+1,:);
+% test_periods = test_data(N*6+1,:);
 decoded_periods = decoded_data(N*6+1,:);
-test_states = reshape(test_data(1:N*6,:), 6, N, Norb);
-test_states = permute(test_states,[3 2 1]);
-test_states(:,:,1) = test_states(:,:,1) + xShift;
+% test_states = reshape(test_data(1:N*6,:), 6, N, Norb);
+% test_states = permute(test_states,[3 2 1]);
+% test_states(:,:,1) = test_states(:,:,1) + xShift;
 decoded_states = reshape(decoded_data(1:N*6,:), 6, N, Norb);
 decoded_states = permute(decoded_states,[3 2 1]);
 decoded_states(:,:,1) = decoded_states(:,:,1) + xShift;
@@ -77,7 +81,7 @@ parfor ii=1:length(decoded_states_corrected)
     [~,y1] = ode113(@(t,state) cr3bpStateOnly(state, mu), linspace(0,decoded_periods(ii),400), decoded_states_corrected(ii,1,1:6), options);
     decoded_states_integrated(ii,:,1:6) = y1;
 end
-
+%%
 % Compute Jacobi constant deviations, Apolune Z, etc.
 maxcdev = NaN(Norb,1);
 zapolune = NaN(Norb,1);
@@ -114,134 +118,20 @@ orbT_resorted = orbT(sortidx,:);
 corrected_idxs = find(~ismember(1:Norb,not_corrected_idxs));
 
 
-%% Plot 1 - Show Decoded Family - multiple views, northern and southern, latent
-clc
-z_apolune = decoded_states(:,1,1)-(1-mu);
-cmap = jet(Norb);
-fig = figure('Color','w','Units','pixels');
-tileWidth = 300;
-tileHeight = tileWidth;
-fig.Position(3:4) = [3*tileWidth, 2*tileHeight];  % 3x3 grid
 
-% Top Row: Northern Family - 3 Views
-% --- View 1: 3D Side View (XZ plane, Y from back) ---
-ax1 = subplot(2,3,1);
-hold(ax1,'on');
-for ii = 10:40:Norb
-    states_out = squeeze(decoded_states(ii,:,:));
-    states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
-    scatter(ax1, states_out(:,1), states_out(:,2), ...
-             20, orbitColor, 'filled');
-    plot(ax1, [states(:,1);states(1,1)], ...
-               [states(:,2);states(1,2)], ...
-               'Color',orbitColor,'LineWidth',1e-10);
-end
-
-scatter(ax1, l1,0,'red','filled','diamond','DisplayName','L_2');
-moon_radius = const.moon_R;
-[Xm,Ym,Zm] = sphere(50);
-Xm = moon_radius*Xm + (1-mu);
-Ym = moon_radius*Ym;
-Zm = moon_radius*Zm;
-surf(ax1, Xm,Ym,Zm, 'FaceColor','k','EdgeColor','none','DisplayName','Moon');
-xlabel(ax1,'X','Interpreter','latex','FontSize',20);
-ylabel(ax1,'Y','Interpreter','latex','FontSize',20);
-set(ax1, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-axis(ax1,'equal');
-xlim(ax1,[-0.3 2.1]); ylim(ax1,[-1.2 1.2]);
-
-% --- View 2: Zoomed Slightly
-ax1 = subplot(2,3,2);
-hold(ax1,'on');
-for ii = 1:100:Norb
-    states_out = squeeze(decoded_states(ii,:,:));
-    states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
-    scatter(ax1, states_out(:,1), states_out(:,2), ...
-             20, orbitColor, 'filled');
-    plot(ax1, [states(:,1);states(1,1)], ...
-               [states(:,2);states(1,2)], ...
-               'Color',orbitColor,'LineWidth',1e-10);
-end
-
-scatter(ax1, l1,0,'red','filled','diamond','DisplayName','L_2');
-moon_radius = const.moon_R;
-[Xm,Ym,Zm] = sphere(50);
-Xm = moon_radius*Xm + (1-mu);
-Ym = moon_radius*Ym;
-Zm = moon_radius*Zm;
-surf(ax1, Xm,Ym,Zm, 'FaceColor','k','EdgeColor','none','DisplayName','Moon');
-xlabel(ax1,'X','Interpreter','latex','FontSize',20);
-ylabel(ax1,'Y','Interpreter','latex','FontSize',20);
-set(ax1, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-axis(ax1,'equal');
-xlim(ax1,[0.4 1.2]); ylim(ax1,[-0.4 0.4]);
-
-% --- View 2: Zoomed A Lot
-ax1 = subplot(2,3,3);
-hold(ax1,'on');
-for ii = 1:35:2000
-    states_out = squeeze(decoded_states(ii,:,:));
-    states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
-    scatter(ax1, states_out(:,1), states_out(:,2), ...
-             20, orbitColor, 'filled');
-    plot(ax1, [states(:,1);states(1,1)], ...
-               [states(:,2);states(1,2)], ...
-               'Color',orbitColor,'LineWidth',1e-10);
-end
-
-scatter(ax1, l1,0,'red','filled','diamond','DisplayName','L_2');
-moon_radius = const.moon_R;
-[Xm,Ym,Zm] = sphere(50);
-Xm = moon_radius*Xm + (1-mu);
-Ym = moon_radius*Ym;
-Zm = moon_radius*Zm;
-surf(ax1, Xm,Ym,Zm, 'FaceColor','k','EdgeColor','none','DisplayName','Moon');
-xlabel(ax1,'X','Interpreter','latex','FontSize',20);
-ylabel(ax1,'Y','Interpreter','latex','FontSize',20);
-set(ax1, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-axis(ax1,'equal');
-xlim(ax1,[0.75 0.91]); ylim(ax1,[-0.08 0.08]);
-
-
-% Bottom Row: 2D Latent Variable Plots
-% --- Latent vs Period ---
-ax7 = subplot(2,3,4);
-scatter(ax7, latent_data, decoded_periods, 20, cmap(1:length(latent_data),:), 'filled');
-xlabel(ax7,'Latent Variable','FontSize',20,'Interpreter','latex');
-ylabel(ax7,'Orbit Period','FontSize',20,'Interpreter','latex');
-set(ax7, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-box(ax7, 'on');
-grid(ax7, 'on');
-
-% --- Latent vs Apolune Distance ---
-ax8 = subplot(2,3,5);
-scatter(ax8, latent_data, z_apolune, 20, cmap(1:length(latent_data),:), 'filled');
-xlabel(ax8,'Latent Variable','FontSize',20,'Interpreter','latex');
-ylabel(ax8,'Apolune Z Value','FontSize',20,'Interpreter','latex');
-set(ax8, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-box(ax8, 'on');
-grid(ax8, 'on');
-
-% --- Latent vs Jacobi Constant ---
-ax9 = subplot(2,3,6);
-scatter(ax9, latent_data, jacobiConstant(decoded_states(:,1,1:6),mu), 20, cmap(1:length(latent_data),:), 'filled');
-xlabel(ax9,'Latent Variable','FontSize',20,'Interpreter','latex');
-ylabel(ax9,'Jacobi Constant','FontSize',20,'Interpreter','latex');
-set(ax9, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-box(ax9, 'on');
-grid(ax9, 'on');
 %%
 %% Plot 1 - Show Decoded Family - Aligned 3-on-2 Layout
 clc
 z_apolune = decoded_states(:,1,1)-(1-mu);
-cmap = jet(Norb);
+
 fig = figure('Color','w','Units','pixels');
 tileWidth = 300;
 tileHeight = tileWidth;
 fig.Position(3:4) = [3*tileWidth, 2*tileHeight]; 
+
+my_cmap = turbo(256);
+x_ref = linspace(min(latent_data), max(latent_data), 256);
+all_orbit_colors = interp1(x_ref, my_cmap, latent_data);
 
 % Create 2x6 grid for perfect vertical alignment
 t = tiledlayout(2, 6, 'Padding', 'compact', 'TileSpacing', 'loose');
@@ -259,53 +149,53 @@ Zm = moon_radius*Zm;
 
 % --- View 1: Wide View ---
 nexttile(1, [1 2]); hold on;
-for ii = 10:40:Norb
+for ii = 1:100:Norb
     states_out = squeeze(decoded_states(ii,:,:));
     states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
+    orbitColor = all_orbit_colors(ii,:);
     scatter(states_out(:,1), states_out(:,2), 20, orbitColor, 'filled');
     plot([states(:,1);states(1,1)], [states(:,2);states(1,2)], ...
          'Color', orbitColor, 'LineWidth', 1e-10);
 end
 scatter(l1, 0, 'red', 'filled', 'diamond', 'DisplayName', 'L_1');
 surf(Xm, Ym, Zm, 'FaceColor', 'k', 'EdgeColor', 'none', 'DisplayName', 'Moon');
-xlabel('X','Interpreter','latex','FontSize',20);
-ylabel('Y','Interpreter','latex','FontSize',20);
-set(gca, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+xlabel('X [LU]','Interpreter','latex','FontSize',30);
+ylabel('Y [LU]','Interpreter','latex','FontSize',30);
+set(gca, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 axis equal; xlim([-0.3 2.1]); ylim([-1.2 1.2]);
 
 % --- View 2: Zoomed Slightly ---
 nexttile(3, [1 2]); hold on;
-for ii = 1:100:Norb
+for ii = 1:200:Norb
     states_out = squeeze(decoded_states(ii,:,:));
     states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
+    orbitColor = all_orbit_colors(ii,:);
     scatter(states_out(:,1), states_out(:,2), 20, orbitColor, 'filled');
     plot([states(:,1);states(1,1)], [states(:,2);states(1,2)], ...
          'Color', orbitColor, 'LineWidth', 1e-10);
 end
 scatter(l1, 0, 'red', 'filled', 'diamond', 'DisplayName', 'L_1');
 surf(Xm, Ym, Zm, 'FaceColor', 'k', 'EdgeColor', 'none', 'DisplayName', 'Moon');
-xlabel('X','Interpreter','latex','FontSize',20);
-ylabel('Y','Interpreter','latex','FontSize',20);
-set(gca, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
-axis equal; xlim([0.4 1.2]); ylim([-0.4 0.4]);
+xlabel('X [LU]','Interpreter','latex','FontSize',30);
+ylabel('Y [LU]','Interpreter','latex','FontSize',30);
+set(gca, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+axis equal; xlim([0.25 1.25]); ylim([-0.5 0.5]);
 
 % --- View 3: Zoomed A Lot ---
 nexttile(5, [1 2]); hold on;
-for ii = 1:35:2000
+for ii = 1:60:4000
     states_out = squeeze(decoded_states(ii,:,:));
     states = squeeze(decoded_states_integrated(ii,:,:));
-    orbitColor = cmap(ii,:);
+    orbitColor = all_orbit_colors(ii,:);
     scatter(states_out(:,1), states_out(:,2), 20, orbitColor, 'filled');
     plot([states(:,1);states(1,1)], [states(:,2);states(1,2)], ...
          'Color', orbitColor, 'LineWidth', 1e-10);
 end
 scatter(l1, 0, 'red', 'filled', 'diamond', 'DisplayName', 'L_1');
 surf(Xm, Ym, Zm, 'FaceColor', 'k', 'EdgeColor', 'none', 'DisplayName', 'Moon');
-xlabel('X','Interpreter','latex','FontSize',20);
-ylabel('Y','Interpreter','latex','FontSize',20);
-set(gca, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+xlabel('X [LU]','Interpreter','latex','FontSize',30);
+ylabel('Y [LU]','Interpreter','latex','FontSize',30);
+set(gca, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 axis equal; xlim([0.75 0.91]); ylim([-0.08 0.08]);
 
 
@@ -315,18 +205,18 @@ axis equal; xlim([0.75 0.91]); ylim([-0.08 0.08]);
 
 % --- Latent vs Period ---
 nexttile(7, [1 3]); 
-scatter(latent_data, decoded_periods, 20, cmap(1:length(latent_data),:), 'filled');
-xlabel('Latent Variable','FontSize',20,'Interpreter','latex');
-ylabel('Orbit Period','FontSize',20,'Interpreter','latex');
-set(gca, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+scatter(latent_data, decoded_periods, 20, all_orbit_colors, 'filled');
+xlabel('Latent Variable','FontSize',30,'Interpreter','latex');
+ylabel('Orbit Period','FontSize',30,'Interpreter','latex');
+set(gca, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 box on; grid on;
 
 % --- Latent vs Jacobi Constant ---
 nexttile(10, [1 3]); 
-scatter(latent_data, jacobiConstant(decoded_states(:,1,1:6),mu), 20, cmap(1:length(latent_data),:), 'filled');
-xlabel('Latent Variable','FontSize',20,'Interpreter','latex');
-ylabel('Jacobi Constant','FontSize',20,'Interpreter','latex');
-set(gca, 'LineWidth', 2, 'FontSize', 20, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
+scatter(latent_data, jacobiConstant(decoded_states(:,1,1:6),mu), 20, all_orbit_colors, 'filled');
+xlabel('Latent Variable','FontSize',30,'Interpreter','latex');
+ylabel('Jacobi Constant','FontSize',30,'Interpreter','latex');
+set(gca, 'LineWidth', 2, 'FontSize', 30, 'FontWeight', 'bold', 'TickLabelInterpreter', 'latex');
 box on; grid on;
 
 %% Plot 2 - Jacobi Difference histogram with point coloring

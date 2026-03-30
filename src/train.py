@@ -25,6 +25,10 @@ def main(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
+    torch.set_num_threads(30) 
+    train_loss_history = []
+    val_loss_history = []
+
     # Load data
     training_set = np.loadtxt(config["train_data_path"],delimiter=",")
     test_data = np.loadtxt(config["test_data_path"],delimiter=",")
@@ -107,12 +111,15 @@ def main(config_path):
             # Total loss (tune lambda_accel as needed)
             # Hyperparameter; add to config.yaml if desired
             total_loss = mse_loss + lambda_T*mse_T_loss
-            
+             
             total_loss.backward()
             optimizer.step()
             train_loss += total_loss.item()
         
         scheduler.step()
+
+        avg_train_loss = train_loss / len(train_loader)
+        train_loss_history.append(avg_train_loss)
 
         # Validation phase
         model.eval()
@@ -123,10 +130,13 @@ def main(config_path):
                 outputs = model(data)
                 val_loss += nn.MSELoss()(outputs[:,:-1], data[:,:-1]).item()
                 val_loss += lambda_T*nn.MSELoss()(outputs[:,-1],data[:,-1]).item()
+
+        avg_val_loss = val_loss / len(val_loader)
+        val_loss_history.append(avg_val_loss)
         
         print(f'Epoch [{epoch+1}/{config["num_epochs"]}], '
-              f'Train Loss: {train_loss/len(train_loader):.4e}, '
-              f'Val Loss: {val_loss/len(val_loader):.4e}')
+              f'Train Loss: {avg_train_loss:.4e}, '
+              f'Val Loss: {avg_val_loss:.4e}')
     
     elapsed_time = time.perf_counter() - start_time
     print(f"Elapsed time: {elapsed_time} seconds")
@@ -141,10 +151,12 @@ def main(config_path):
     decoded_test_np = decoded_test.cpu().numpy().T  # Shape: (307, test_size)
     latent_test_np = latent_test.cpu().numpy()
 
-    np.savetxt(config["decoded_data_path"], decoded_test_np, delimiter=",")
-    np.savetxt(config["latent_data_path"],latent_test_np, delimiter=",")
-    torch.save(model.state_dict(), config["model_path"])
-
+    np.savetxt(config["decoded_data_path_runs"], decoded_test_np, delimiter=",")
+    # np.savetxt(config["latent_data_path"],latent_test_np, delimiter=",")
+    # torch.save(model.state_dict(), config["model_path"])
+    
+    # loss_data = np.column_stack((train_loss_history, val_loss_history))
+    # np.savetxt("loss_history.txt", loss_data, header="train_loss, val_loss", delimiter=",")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load configuration file")
