@@ -1,8 +1,16 @@
-data/
+# Large datasets: ignore everything in data/ except generator scripts and constants
+data/**
+!data/**/
+!data/**/*.m
+!data/cr3bp_constants.mat
+
 *.pth
 **/*.txt
 *.pptx
 **/*.jpg
+
+# README figures
+!docs/figures/*.jpg
 
 !READNE.txt
 !requirements.txt
