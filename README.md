@@ -389,8 +389,8 @@ If you use this code, please cite:
   author  = {Clark, Thomas H. and Scheeres, Daniel J.},
   journal = {Journal of Guidance, Control, and Dynamics},
   year    = {2026},
-  doi     = {10.2514/1.G009889},
-  note    = {Article in Advance}
+  month   = {08},
+  doi     = {10.2514/1.G009889}
 }
 ```
 
